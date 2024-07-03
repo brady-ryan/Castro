@@ -78,6 +78,10 @@ Castro::shock(const Box& bx,
   [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
   {
     Real div_u = 0.0_rt;
+    Real div_u_p1 = 0.0_rt;
+    Real div_u_p2 = 0.0_rt;
+    Real div_u_m1 = 0.0_rt;
+    Real div_u_m2 = 0.0_rt;
 
     // construct div{U}
     if (coord_type == 0) {
@@ -95,8 +99,24 @@ Castro::shock(const Box& bx,
       Real rm = (i - 1 + 0.5_rt) * dx[0];
       Real rp = (i + 1 + 0.5_rt) * dx[0];
       div_u += 0.5_rt * (rp * q_arr(i+1,j,k,QU) - rm * q_arr(i-1,j,k,QU)) / (rc * dx[0]);
+
+      Real rc_p1 = (i + 1.5_rt) * dx[0];
+      Real rc_p2 = (i + 2.5_rt) * dx[0];
+      Real rc_m1 = (i - 0.5_rt) * dx[0];
+      Real rc_m2 = (i - 1.5_rt) * dx[0];
+    
+      div_u_p1 = 0.5_rt * (rc_p1 * q_arr(i+1,j,k,QU) - rc_m1 * q_arr(i-1,j,k,QU)) / (rc_p1 * dx[0]);
+      div_u_p2 = 0.5_rt * (rc_p2 * q_arr(i+2,j,k,QU) - rc_p1 * q_arr(i,j,k,QU)) / (rc_p2 * dx[0]);
+      div_u_m1 = 0.5_rt * (rc_p1 * q_arr(i,j,k,QU) - rc_m1 * q_arr(i-2,j,k,QU)) / (rc_m1 * dx[0]);
+      div_u_m2 = 0.5_rt * (rc_m1 * q_arr(i-1,j,k,QU) - rc_m2 * q_arr(i-3,j,k,QU)) / (rc_m2 * dx[0]);
+
 #if (AMREX_SPACEDIM == 2)
       div_u += 0.5_rt * (q_arr(i,j+1,k,QV) - q_arr(i,j-1,k,QV)) * dyinv;
+      div_u_p1 += 0.5_rt * (q_arr(i,j+1,k,QV) - q_arr(i,j-1,k,QV)) * dyinv;
+      div_u_p2 += 0.5_rt * (q_arr(i,j+2,k,QV) - q_arr(i,j,k,QV)) * dyinv;
+      div_u_m1 += 0.5_rt * (q_arr(i,j,k,QV) - q_arr(i,j-2,k,QV)) * dyinv;
+      div_u_m2 += 0.5_rt * (q_arr(i,j-1,k,QV) - q_arr(i,j-3,k,QV)) * dyinv;
+#endif
 #endif
     } else if (coord_type == 2) {
       // 1-d spherical
@@ -109,9 +129,12 @@ Castro::shock(const Box& bx,
     }
 
     // dilatation-based shock detection from Bidadi et. al.
-    Real Dtheta = (-div_u[i+1] + 2*div_u[i] - div_u[i-1]) / 4;
+    // they say theta = div{U}
+    Real Dtheta = (-div_u_p1 + 2*div_u - div_u_m1) / 4;
+    Real Dtheta_p1 = (-div_u_p2 + 2*div_u_p1 - div_u) / 4;
+    Real Dtheta_m1 = (-div_u + 2*div_u_m1 - div_u_m2) / 4
 
-    Real Dtheta_mag = 0.5 * (std::pow(Dtheta[i] - Dtheta[i+1],2) + std::pow(Dtheta[i] - Dtheta[i-1],2));
+    Real Dtheta_mag = 0.5 * (std::pow(Dtheta - Dtheta_p1,2) + std::pow(Dtheta - Dtheta_m1,2));
     Real a = q_arr(i,j,k,QC);
     Real r_i = (Dtheta_mag / ((a * a) / (dx[0] * dx[0])) + 1e-16_rt);
 
