@@ -87,10 +87,6 @@ Castro::shock(const Box& bx,
     if (coord_type == 0) {
       // Cartesian
       div_u += 0.5_rt * (q_arr(i+1,j,k,QU) - q_arr(i-1,j,k,QU)) * dxinv;
-      div_u_p1 = 0.5_rt * (q_arr(i+2,j,k,QU) - q_arr(i,j,k,QU)) * dxinv;
-      div_u_p2 = 0.5_rt * (q_arr(i+3,j,k,QU) - q_arr(i+1,j,k,QU)) * dxinv;
-      div_u_m1 = 0.5_rt * (q_arr(i,j,k,QU) - q_arr(i-2,j,k,QU)) * dxinv;
-      div_u_m2 = 0.5_rt * (q_arr(i-1,j,k,QU) - q_arr(i-3,j,k,QU)) * dxinv;
 #if (AMREX_SPACEDIM >= 2)
       div_u += 0.5_rt * (q_arr(i,j+1,k,QV) - q_arr(i,j-1,k,QV)) * dyinv;
 #endif
@@ -108,16 +104,26 @@ Castro::shock(const Box& bx,
       Real rc_p2 = (i + 2.5_rt) * dx[0];
       Real rc_m1 = (i - 0.5_rt) * dx[0];
       Real rc_m2 = (i - 1.5_rt) * dx[0];
-    
-      div_u_p1 += 0.5_rt * (rc_p1 * q_arr(i+1,j,k,QU) - rc_m1 * q_arr(i-1,j,k,QU)) / (rc_p1 * dx[0]);
-      div_u_p2 += 0.5_rt * (rc_p2 * q_arr(i+2,j,k,QU) - rc_p1 * q_arr(i,j,k,QU)) / (rc_p2 * dx[0]);
-      div_u_m1 += 0.5_rt * (rc_p1 * q_arr(i,j,k,QU) - rc_m1 * q_arr(i-2,j,k,QU)) / (rc_m1 * dx[0]);
-      div_u_m2 += 0.5_rt * (rc_m1 * q_arr(i-1,j,k,QU) - rc_m2 * q_arr(i-3,j,k,QU)) / (rc_m2 * dx[0]);
+
+      Real rm_p1 = (i + 0.5_rt) * dx[0];
+      Real rm_p2 = (i + 1 + 0.5_rt) * dx[0];
+      Real rm_m1 = (i - 2 + 0.5_rt) * dx[0];
+      Real rm_m2 = (i - 3 + 0.5_rt) * dx[0];
+
+      Real rp_p1 = (i + 2 + 0.5_rt) * dx[0];
+      Real rp_p2 = (i + 3 + 0.5_rt) * dx[0];
+      Real rp_m1 = (i + 0.5_rt) * dx[0];
+      Real rp_m2 = (i - 1 + 0.5_rt) * dx[0];
+
+      div_u_p1 = 0.5_rt * (rp_p1 * q_arr(i+2,j,k,QU) - rm_p1 * q_arr(i,j,k,QU)) / (rc_p1 * dx[0]);
+      div_u_p2 = 0.5_rt * (rp_p2 * q_arr(i+3,j,k,QU) - rm_p2 * q_arr(i+1,j,k,QU)) / (rc_p2 * dx[0]);
+      div_u_m1 = 0.5_rt * (rp_p1 * q_arr(i,j,k,QU) - rm_p1 * q_arr(i-2,j,k,QU)) / (rc_m1 * dx[0]);
+      div_u_m2 = 0.5_rt * (rp_p2 * q_arr(i-1,j,k,QU) - rm_p2 * q_arr(i-3,j,k,QU)) / (rc_m2 * dx[0]);
 
 #if (AMREX_SPACEDIM == 2)
       div_u += 0.5_rt * (q_arr(i,j+1,k,QV) - q_arr(i,j-1,k,QV)) * dyinv;
-      div_u_p1 += 0.5_rt * (q_arr(i,j+1,k,QV) - q_arr(i,j-1,k,QV)) * dyinv;
-      div_u_p2 += 0.5_rt * (q_arr(i,j+2,k,QV) - q_arr(i,j,k,QV)) * dyinv;
+      div_u_p1 += 0.5_rt * (q_arr(i,j+2,k,QV) - q_arr(i,j,k,QV)) * dyinv;
+      div_u_p2 += 0.5_rt * (q_arr(i,j+3,k,QV) - q_arr(i,j+1,k,QV)) * dyinv;
       div_u_m1 += 0.5_rt * (q_arr(i,j,k,QV) - q_arr(i,j-2,k,QV)) * dyinv;
       div_u_m2 += 0.5_rt * (q_arr(i,j-1,k,QV) - q_arr(i,j-3,k,QV)) * dyinv;
 #endif
