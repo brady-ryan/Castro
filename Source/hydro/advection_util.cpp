@@ -87,6 +87,10 @@ Castro::shock(const Box& bx,
     if (coord_type == 0) {
       // Cartesian
       div_u += 0.5_rt * (q_arr(i+1,j,k,QU) - q_arr(i-1,j,k,QU)) * dxinv;
+      div_u_p1 = 0.5_rt * (q_arr(i+2,j,k,QU) - q_arr(i,j,k,QU)) * dxinv;
+      div_u_p2 = 0.5_rt * (q_arr(i+3,j,k,QU) - q_arr(i+1,j,k,QU)) * dxinv;
+      div_u_m1 = 0.5_rt * (q_arr(i,j,k,QU) - q_arr(i-2,j,k,QU)) * dxinv;
+      div_u_m2 = 0.5_rt * (q_arr(i-1,j,k,QU) - q_arr(i-3,j,k,QU)) * dxinv;
 #if (AMREX_SPACEDIM >= 2)
       div_u += 0.5_rt * (q_arr(i,j+1,k,QV) - q_arr(i,j-1,k,QV)) * dyinv;
 #endif
