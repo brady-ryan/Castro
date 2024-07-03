@@ -57,7 +57,8 @@ Castro::ctoprim(const Box& bx,
   });
 }
 
-void Castro::shock(const Box& bx,
+void 
+Castro::shock(const Box& bx,
                    Array4<Real const> const& q_arr,
                    Array4<Real const> const& U_src_arr,
                    Array4<Real> const& shk) {
@@ -108,9 +109,9 @@ void Castro::shock(const Box& bx,
     }
 
     // dilatation-based shock detection from Bidadi et. al.
-    Real Dtheta = (-divu[i+1] + 2*divu[i] - divu[i-1]) / 4;
+    Real Dtheta = (-div_u[i+1] + 2*div_u[i] - div_u[i-1]) / 4;
 
-    Real Dtheta_mag = 0.5 * (std::pow(Dtheta[i] - Dtheta[i+1],2) + std::sqrt(Dtheta[i] - Dtheta[i-1],2));
+    Real Dtheta_mag = 0.5 * (std::pow(Dtheta[i] - Dtheta[i+1],2) + std::pow(Dtheta[i] - Dtheta[i-1],2));
     Real a = q_arr(i,j,k,QC);
     Real r_i = (Dtheta_mag / ((a * a) / (dx[0] * dx[0])) + 1e-16_rt);
 
