@@ -132,7 +132,7 @@ Castro::shock(const Box& bx,
     // they say theta = div{U}
     Real Dtheta = (-div_u_p1 + 2*div_u - div_u_m1) / 4;
     Real Dtheta_p1 = (-div_u_p2 + 2*div_u_p1 - div_u) / 4;
-    Real Dtheta_m1 = (-div_u + 2*div_u_m1 - div_u_m2) / 4
+    Real Dtheta_m1 = (-div_u + 2*div_u_m1 - div_u_m2) / 4;
 
     Real Dtheta_mag = 0.5 * (std::pow(Dtheta - Dtheta_p1,2) + std::pow(Dtheta - Dtheta_m1,2));
     Real a = q_arr(i,j,k,QC);
