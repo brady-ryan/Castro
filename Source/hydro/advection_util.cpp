@@ -124,7 +124,7 @@ void Castro::shock(const Box& bx,
     Real r_th = 1e-6_rt;  // this can be adjusted based on the needs
     Real alpha_sc = 0.5_rt * (1.0_rt - r_th / r_i + std::abs(1.0_rt - r_th / r_i));
 
-    if (alpha_sc > 0.0_rt) {
+    if (alpha_sc > castro::shock_detection_threshold) {
       shk(i,j,k) = 1.0_rt;
     } else {
       shk(i,j,k) = 0.0_rt;
