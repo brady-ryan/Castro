@@ -57,16 +57,10 @@ Castro::ctoprim(const Box& bx,
   });
 }
 
-
-void
-Castro::shock(const Box& bx,
-              Array4<Real const> const& q_arr,
-              Array4<Real const> const& U_src_arr,
-              Array4<Real> const& shk) {
-
-  // This is a basic multi-dimensional shock detection algorithm.
-  // we look for |grad P . dx| / P > 2/3 and div u < 0
-  // This is basically the method in Gronow et al. 2020
+void Castro::shock(const Box& bx,
+                   Array4<Real const> const& q_arr,
+                   Array4<Real const> const& U_src_arr,
+                   Array4<Real> const& shk) {
 
   const auto dx = geom.CellSizeArray();
   const int coord_type = geom.Coord();
@@ -86,7 +80,6 @@ Castro::shock(const Box& bx,
 
     // construct div{U}
     if (coord_type == 0) {
-
       // Cartesian
       div_u += 0.5_rt * (q_arr(i+1,j,k,QU) - q_arr(i-1,j,k,QU)) * dxinv;
 #if (AMREX_SPACEDIM >= 2)
@@ -95,88 +88,49 @@ Castro::shock(const Box& bx,
 #if (AMREX_SPACEDIM == 3)
       div_u += 0.5_rt * (q_arr(i,j,k+1,QW) - q_arr(i,j,k-1,QW)) * dzinv;
 #endif
-
-#if AMREX_SPACEDIM <= 2
-   } else if (coord_type == 1) {
-
-     // r-z
-     Real rc = (i + 0.5_rt) * dx[0];
-     Real rm = (i - 1 + 0.5_rt) * dx[0];
-     Real rp = (i + 1 + 0.5_rt) * dx[0];
-
-#if (AMREX_SPACEDIM == 1)
-     div_u += 0.5_rt * (rp * q_arr(i+1,j,k,QU) - rm * q_arr(i-1,j,k,QU)) / (rc * dx[0]);
-#endif
+    } else if (coord_type == 1) {
+      // r-z
+      Real rc = (i + 0.5_rt) * dx[0];
+      Real rm = (i - 1 + 0.5_rt) * dx[0];
+      Real rp = (i + 1 + 0.5_rt) * dx[0];
+      div_u += 0.5_rt * (rp * q_arr(i+1,j,k,QU) - rm * q_arr(i-1,j,k,QU)) / (rc * dx[0]);
 #if (AMREX_SPACEDIM == 2)
-     div_u += 0.5_rt * (rp * q_arr(i+1,j,k,QU) - rm * q_arr(i-1,j,k,QU)) / (rc * dx[0]) +
-              0.5_rt * (q_arr(i,j+1,k,QV) - q_arr(i,j-1,k,QV)) * dyinv;
+      div_u += 0.5_rt * (q_arr(i,j+1,k,QV) - q_arr(i,j-1,k,QV)) * dyinv;
 #endif
-#endif
-
-#if AMREX_SPACEDIM == 1
     } else if (coord_type == 2) {
-
       // 1-d spherical
       Real rc = (i + 0.5_rt) * dx[0];
       Real rm = (i - 1 + 0.5_rt) * dx[0];
       Real rp = (i + 1 + 0.5_rt) * dx[0];
-
       div_u += 0.5_rt * (rp * rp * q_arr(i+1,j,k,QU) - rm * rm * q_arr(i-1,j,k,QU)) / (rc * rc * dx[0]);
-#endif
-
-#ifndef AMREX_USE_GPU
-
     } else {
       amrex::Error("ERROR: invalid coord_type in shock");
-#endif
     }
 
-
-    // now compute (grad P - rho g) . dx
-    // We subtract off the hydrostatic force, since the pressure that
-    // balances that is not available to make a shock.
-    // We'll use a centered diff for the pressure gradient.
-    Real dP_x = 0.5_rt * (q_arr(i+1,j,k,QPRES) - q_arr(i-1,j,k,QPRES));
-    if (shock_detection_include_sources == 1) {
-        dP_x += -0.25_rt * dx[0] * (U_src_arr(i+1,j,k,UMX) + 2.0_rt * U_src_arr(i,j,k,UMX) + U_src_arr(i-1,j,k,UMX));
-    }
-    Real dP_y = 0.0_rt;
-    Real dP_z = 0.0_rt;
+    // dilatation-based shock detection from Bidadi et. al.
+    Real Dtheta = (q_arr(i+1,j,k,QU) - q_arr(i-1,j,k,QU)) * dxinv;
 #if AMREX_SPACEDIM >= 2
-    dP_y = 0.5_rt * (q_arr(i,j+1,k,QPRES) - q_arr(i,j-1,k,QPRES));
-    if (shock_detection_include_sources == 1) {
-        dP_y += -0.25_rt * dx[1] * (U_src_arr(i,j+1,k,UMY) + 2.0_rt * U_src_arr(i,j,k,UMY) + U_src_arr(i,j-1,k,UMY));
-    }
+    Dtheta += (q_arr(i,j+1,k,QV) - q_arr(i,j-1,k,QV)) * dyinv;
 #endif
 #if AMREX_SPACEDIM == 3
-    dP_z = 0.5_rt * (q_arr(i,j,k+1,QPRES) - q_arr(i,j,k-1,QPRES));
-    if (shock_detection_include_sources == 1) {
-        dP_z += -0.25_rt * dx[2] * (U_src_arr(i,j,k+1,UMZ) + 2.0_rt * U_src_arr(i,j,k,UMZ) + U_src_arr(i,j,k-1,UMZ));
-    }
+    Dtheta += (q_arr(i,j,k+1,QW) - q_arr(i,j,k-1,QW)) * dzinv;
 #endif
 
-    //Real gradPdx_over_P = std::sqrt(dP_x * dP_x + dP_y * dP_y + dP_z * dP_z) / q_arr(i,j,k,QPRES);
-    Real vel = std::sqrt(q_arr(i,j,k,QU) * q_arr(i,j,k,QU) +
-                         q_arr(i,j,k,QV) * q_arr(i,j,k,QV) +
-                         q_arr(i,j,k,QW) * q_arr(i,j,k,QW));
+    Real Dtheta_mag = std::sqrt(Dtheta * Dtheta);
+    Real a = std::sqrt(q_arr(i,j,k,GAMMA) * q_arr(i,j,k,QPRES) / q_arr(i,j,k,RHO));
+    Real r_i = (Dtheta_mag * a * a) / (dx[0] * dx[0] + 1e-12_rt);
 
-    Real gradPdx_over_P{0.0_rt};
-    if (vel != 0.0) {
-        gradPdx_over_P = std::abs(dP_x * q_arr(i,j,k,QU) +
-                                  dP_y * q_arr(i,j,k,QV) +
-                                  dP_z * q_arr(i,j,k,QW)) / vel;
-    }
-    gradPdx_over_P /= q_arr(i,j,k,QPRES);
+    // filter strength estimation
+    Real r_th = 1e-6_rt;  // this can be adjusted based on the needs
+    Real alpha_sc = 0.5_rt * (1.0_rt - r_th / r_i + std::abs(1.0_rt - r_th / r_i));
 
-    if (gradPdx_over_P > castro::shock_detection_threshold && div_u < 0.0_rt) {
+    if (alpha_sc > 0.0_rt) {
       shk(i,j,k) = 1.0_rt;
     } else {
       shk(i,j,k) = 0.0_rt;
     }
   });
-
 }
-
 
 void
 Castro::divu(const Box& bx,
