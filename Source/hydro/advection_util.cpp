@@ -108,23 +108,13 @@ void Castro::shock(const Box& bx,
     }
 
     // dilatation-based shock detection from Bidadi et. al.
-    Real Dtheta = (q_arr(i+1,j,k,QU) - q_arr(i-1,j,k,QU)) * dxinv;
-#if AMREX_SPACEDIM >= 2
-    Dtheta += (q_arr(i,j+1,k,QV) - q_arr(i,j-1,k,QV)) * dyinv;
-#endif
-#if AMREX_SPACEDIM == 3
-    Dtheta += (q_arr(i,j,k+1,QW) - q_arr(i,j,k-1,QW)) * dzinv;
-#endif
+    Real Dtheta = (-divu[i+1] + 2*divu[i] - divu[i-1]) / 4;
 
-    Real Dtheta_mag = std::sqrt(Dtheta * Dtheta);
-    Real a = std::sqrt(q_arr(i,j,k,GAMMA) * q_arr(i,j,k,QPRES) / q_arr(i,j,k,RHO));
-    Real r_i = (Dtheta_mag * a * a) / (dx[0] * dx[0] + 1e-12_rt);
+    Real Dtheta_mag = 0.5 * (std::pow(Dtheta[i] - Dtheta[i+1],2) + std::sqrt(Dtheta[i] - Dtheta[i-1],2));
+    Real a = q_arr(i,j,k,QC);
+    Real r_i = (Dtheta_mag / ((a * a) / (dx[0] * dx[0])) + 1e-16_rt);
 
-    // filter strength estimation
-    Real r_th = 1e-6_rt;  // this can be adjusted based on the needs
-    Real alpha_sc = 0.5_rt * (1.0_rt - r_th / r_i + std::abs(1.0_rt - r_th / r_i));
-
-    if (alpha_sc > castro::shock_detection_threshold) {
+    if (r_i > castro::shock_detection_threshold) {
       shk(i,j,k) = 1.0_rt;
     } else {
       shk(i,j,k) = 0.0_rt;
