@@ -102,7 +102,6 @@ Castro::shock(const Box& bx,
 #if (AMREX_SPACEDIM == 2)
       div_u += 0.5_rt * (q_arr(i,j+1,k,QV) - q_arr(i,j-1,k,QV)) * dyinv;
       // calculate curl{U} in 2D cylindrical coordinates
-      Real rc = (i + 0.5_rt) * dx[0];
       curl_u += 0.5_rt * (q_arr(i+1,j,k,QW) - q_arr(i-1,j,k,QW)) * dxinv; // d(Uz)/dr
       curl_u -= 0.5_rt * (q_arr(i,j+1,k,QU) - q_arr(i,j-1,k,QU)) * dyinv; // d(Ur)/dz
       curl_u /= rc;
