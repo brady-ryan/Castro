@@ -115,7 +115,7 @@ void Castro::shock(const Box& bx,
     num = abs(q_arr(i+1,j,k,QPRES) - 2*q_arr(i,j+1,k,QPRES) + q_arr(i-1,j,k,QPRES));
     denom = abs(q_arr(i+1,j,k,QPRES) + 2*q_arr(i,j,k,QPRES) + q_arr(i-1,j,k,QPRES));
 
-    r_i = (num / denom) * ((div_u * div_u) / (div_u * div_u + curl_u * curl_u + 1.e-30)) + 1.e-16
+    r_i = (num / denom) * ((div_u * div_u) / (div_u * div_u + curl_u * curl_u + 1.e-30)) + 1.e-16;
 
     if (r_i > castro::shock_detection_threshold) {
       shk(i,j,k) = 1.0_rt;
