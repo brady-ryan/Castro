@@ -79,8 +79,6 @@ Castro::shock(const Box& bx,
   {
     Real div_u = 0.0_rt;
     Real curl_u = 0.0_rt;
-    Real num = 0.0_rt;
-    Real denom = 0.0_rt;
     Real r_i = 0.0_rt;
 
     // construct div{U}
@@ -101,10 +99,9 @@ Castro::shock(const Box& bx,
       div_u += 0.5_rt * (rp * q_arr(i+1,j,k,QU) - rm * q_arr(i-1,j,k,QU)) / (rc * dx[0]);
 #if (AMREX_SPACEDIM == 2)
       div_u += 0.5_rt * (q_arr(i,j+1,k,QV) - q_arr(i,j-1,k,QV)) * dyinv;
-      // calculate curl{U} in 2D cylindrical coordinates
-      curl_u += 0.5_rt * (q_arr(i+1,j,k,QW) - q_arr(i-1,j,k,QW)) * dxinv; // d(Uz)/dr
-      curl_u -= 0.5_rt * (q_arr(i,j+1,k,QU) - q_arr(i,j-1,k,QU)) * dyinv; // d(Ur)/dz
-      curl_u /= rc;
+      // calculate curl{U} in 2D cylindrical coordinates using central difference
+      curl_u += 0.5_rt * (q_arr(i+1,j,k,QV) - q_arr(i-1,j,k,QV)) * dxinv;
+      curl_u -= 0.5_rt * (q_arr(i,j+1,k,QU) - q_arr(i,j-1,k,QU)) * dyinv;
 #endif
     } else if (coord_type == 2) {
       // 1-d spherical
@@ -117,8 +114,8 @@ Castro::shock(const Box& bx,
     }
 
     // radial shock method
-    num = abs(q_arr(i+1,j,k,QPRES) - 2*q_arr(i,j+1,k,QPRES) + q_arr(i-1,j,k,QPRES));
-    denom = abs(q_arr(i+1,j,k,QPRES) + 2*q_arr(i,j,k,QPRES) + q_arr(i-1,j,k,QPRES));
+    Real num = abs(q_arr(i+1,j,k,QPRES) - 2*q_arr(i,j+1,k,QPRES) + q_arr(i-1,j,k,QPRES));
+    Real denom = abs(q_arr(i+1,j,k,QPRES) + 2*q_arr(i,j,k,QPRES) + q_arr(i-1,j,k,QPRES));
 
     r_i = (num / denom) * ((div_u * div_u) / (div_u * div_u + curl_u * curl_u + 1.e-30)) + 1.e-16;
 
