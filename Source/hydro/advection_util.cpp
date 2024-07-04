@@ -77,6 +77,7 @@ void Castro::shock(const Box& bx,
   [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
   {
     Real div_u = 0.0_rt;
+    Real curl_u = 0.0_rt;
 
     // construct div{U}
     if (coord_type == 0) {
@@ -96,6 +97,9 @@ void Castro::shock(const Box& bx,
       div_u += 0.5_rt * (rp * q_arr(i+1,j,k,QU) - rm * q_arr(i-1,j,k,QU)) / (rc * dx[0]);
 #if (AMREX_SPACEDIM == 2)
       div_u += 0.5_rt * (q_arr(i,j+1,k,QV) - q_arr(i,j-1,k,QV)) * dyinv;
+      // calculate curl{U} in 2D cylindrical coordinates
+      curl_u += 0.5_rt * (q_arr(i+1,j,k,QW) - q_arr(i-1,j,k,QW)) * dxinv; // d(Uz)/dr
+      curl_u -= 0.5_rt * (q_arr(i,j+1,k,QU) - q_arr(i,j-1,k,QU)) * dyinv; // d(Ur)/dz
 #endif
     } else if (coord_type == 2) {
       // 1-d spherical
@@ -107,24 +111,13 @@ void Castro::shock(const Box& bx,
       amrex::Error("ERROR: invalid coord_type in shock");
     }
 
-    // dilatation-based shock detection from Bidadi et. al.
-    Real Dtheta = (q_arr(i+1,j,k,QU) - q_arr(i-1,j,k,QU)) * dxinv;
-#if AMREX_SPACEDIM >= 2
-    Dtheta += (q_arr(i,j+1,k,QV) - q_arr(i,j-1,k,QV)) * dyinv;
-#endif
-#if AMREX_SPACEDIM == 3
-    Dtheta += (q_arr(i,j,k+1,QW) - q_arr(i,j,k-1,QW)) * dzinv;
-#endif
+    // radial shock method
+    num = abs(q_arr(i+1,j,k,QPRES) - 2*q_arr(i,j+1,k,QPRES) + q_arr(i-1,j,k,QPRES));
+    denom = abs(q_arr(i+1,j,k,QPRES) + 2*q_arr(i,j,k,QPRES) + q_arr(i-1,j,k,QPRES));
 
-    Real Dtheta_mag = std::sqrt(Dtheta * Dtheta);
-    Real a = std::sqrt(q_arr(i,j,k,GAMMA) * q_arr(i,j,k,QPRES) / q_arr(i,j,k,RHO));
-    Real r_i = (Dtheta_mag * a * a) / (dx[0] * dx[0] + 1e-12_rt);
+    r_i = (num / denom) * ((div_u * div_u) / (div_u * div_u + curl_u * curl_u + 1.e-30)) + 1.e-16
 
-    // filter strength estimation
-    Real r_th = 1e-6_rt;  // this can be adjusted based on the needs
-    Real alpha_sc = 0.5_rt * (1.0_rt - r_th / r_i + std::abs(1.0_rt - r_th / r_i));
-
-    if (alpha_sc > 0.0_rt) {
+    if (r_i > castro::shock_detection_threshold) {
       shk(i,j,k) = 1.0_rt;
     } else {
       shk(i,j,k) = 0.0_rt;
