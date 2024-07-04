@@ -78,6 +78,8 @@ void Castro::shock(const Box& bx,
   {
     Real div_u = 0.0_rt;
     Real curl_u = 0.0_rt;
+    Real num = 0.0_rt;
+    Real denom = 0.0_rt;
 
     // construct div{U}
     if (coord_type == 0) {
