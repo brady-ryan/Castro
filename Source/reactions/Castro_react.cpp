@@ -241,7 +241,7 @@ Castro::react_state(MultiFab& s, MultiFab& r, Real time, Real dt, const int stra
             // Don't burn on zones inside shock regions, if the relevant option is set.
 
 #ifdef SHOCK_VAR
-            if (U(i,j,k,USHK) > 0.0_rt && disable_shock_burning == 1) {
+            if (U(i,j,k,USHK) > 0.0_rt && disable_shock_burning >= 1) {
                 do_burn = false;
             }
 #endif
