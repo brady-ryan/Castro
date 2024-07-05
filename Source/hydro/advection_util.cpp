@@ -80,13 +80,16 @@ Castro::shock(const Box& bx,
     Real div_u = 0.0_rt;
     Real curl_u = 0.0_rt;
 
-    // construct div{U}
+    // construct div{U} and curl{U}
     if (coord_type == 0) {
 
       // Cartesian
       div_u += 0.5_rt * (q_arr(i+1,j,k,QU) - q_arr(i-1,j,k,QU)) * dxinv;
+      curl_u += 0.0_rt;
 #if (AMREX_SPACEDIM >= 2)
       div_u += 0.5_rt * (q_arr(i,j+1,k,QV) - q_arr(i,j-1,k,QV)) * dyinv;
+      curl_u += 0.5_rt * (q_arr(i+1,j,k,QV) - q_arr(i-1,j,k,QV)) * dxinv;
+      curl_u -= 0.5_rt * (q_arr(i,j+1,k,QU) - q_arr(i,j-1,k,QU)) * dyinv;
 #endif
 #if (AMREX_SPACEDIM == 3)
       div_u += 0.5_rt * (q_arr(i,j,k+1,QW) - q_arr(i,j,k-1,QW)) * dzinv;
@@ -102,6 +105,7 @@ Castro::shock(const Box& bx,
 
 #if (AMREX_SPACEDIM == 1)
      div_u += 0.5_rt * (rp * q_arr(i+1,j,k,QU) - rm * q_arr(i-1,j,k,QU)) / (rc * dx[0]);
+     curl_u += 0.0_rt;
 #endif
 #if (AMREX_SPACEDIM == 2)
      div_u += 0.5_rt * (rp * q_arr(i+1,j,k,QU) - rm * q_arr(i-1,j,k,QU)) / (rc * dx[0]) +
@@ -121,6 +125,7 @@ Castro::shock(const Box& bx,
       Real rp = (i + 1 + 0.5_rt) * dx[0];
 
       div_u += 0.5_rt * (rp * rp * q_arr(i+1,j,k,QU) - rm * rm * q_arr(i-1,j,k,QU)) / (rc * rc * dx[0]);
+      curl_u += 0.0_rt;
 #endif
 
 #ifndef AMREX_USE_GPU
@@ -179,7 +184,7 @@ if (castro::disable_shock_burning == 1) {
 } else if (castro::disable_shock_burning == 2) {
     // pressure based shock detection method from Bidali et. al.
     Real r_i = 0.0_rt;
-    Real num = abs(q_arr(i+1,j,k,QPRES) - 2*q_arr(i,j+1,k,QPRES) + q_arr(i-1,j,k,QPRES));
+    Real num = abs(q_arr(i+1,j,k,QPRES) - 2*q_arr(i,j,k,QPRES) + q_arr(i-1,j,k,QPRES));
     Real denom = abs(q_arr(i+1,j,k,QPRES) + 2*q_arr(i,j,k,QPRES) + q_arr(i-1,j,k,QPRES));
 
     r_i = (num / denom) * ((div_u * div_u) / (div_u * div_u + curl_u * curl_u + 1.e-30)) + 1.e-16;
