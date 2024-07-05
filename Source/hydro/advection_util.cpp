@@ -131,7 +131,9 @@ Castro::shock(const Box& bx,
 #endif
     }
 
-if (castro::disable_shock_burning == 1) {
+if (castro::disable_shock_burning == 0) {
+  shk(i,j,k) = 0.0_rt;
+} else if (castro::disable_shock_burning == 1) {
     // This is a basic multi-dimensional shock detection algorithm.
     // we look for |grad P . dx| / P > 2/3 and div u < 0
     // This is basically the method in Gronow et al. 2020
@@ -177,7 +179,6 @@ if (castro::disable_shock_burning == 1) {
     } else {
       shk(i,j,k) = 0.0_rt;
     }
-#endif
 } else if (castro::disable_shock_burning == 2) {
     // pressure based shock detection method from Bidali et. al.
     Real r_i = 0.0_rt;
