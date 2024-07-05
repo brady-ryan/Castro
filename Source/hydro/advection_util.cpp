@@ -64,10 +64,6 @@ Castro::shock(const Box& bx,
               Array4<Real const> const& U_src_arr,
               Array4<Real> const& shk) {
 
-  // This is a basic multi-dimensional shock detection algorithm.
-  // we look for |grad P . dx| / P > 2/3 and div u < 0
-  // This is basically the method in Gronow et al. 2020
-
   const auto dx = geom.CellSizeArray();
   const int coord_type = geom.Coord();
 
@@ -83,6 +79,7 @@ Castro::shock(const Box& bx,
   [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
   {
     Real div_u = 0.0_rt;
+    Real curl_u = 0.0_rt;
 
     // construct div{U}
     if (coord_type == 0) {
@@ -110,6 +107,9 @@ Castro::shock(const Box& bx,
 #if (AMREX_SPACEDIM == 2)
      div_u += 0.5_rt * (rp * q_arr(i+1,j,k,QU) - rm * q_arr(i-1,j,k,QU)) / (rc * dx[0]) +
               0.5_rt * (q_arr(i,j+1,k,QV) - q_arr(i,j-1,k,QV)) * dyinv;
+      // calculate curl{U} in 2D cylindrical coordinates using central difference
+     curl_u += 0.5_rt * (q_arr(i+1,j,k,QV) - q_arr(i-1,j,k,QV)) * dxinv;
+     curl_u -= 0.5_rt * (q_arr(i,j+1,k,QU) - q_arr(i,j-1,k,QU)) * dyinv;
 #endif
 #endif
 
@@ -131,8 +131,12 @@ Castro::shock(const Box& bx,
 #endif
     }
 
+#if (castro::disable_shock_burning == 1)
+    // This is a basic multi-dimensional shock detection algorithm.
+    // we look for |grad P . dx| / P > 2/3 and div u < 0
+    // This is basically the method in Gronow et al. 2020
 
-    // now compute (grad P - rho g) . dx
+    // compute (grad P - rho g) . dx
     // We subtract off the hydrostatic force, since the pressure that
     // balances that is not available to make a shock.
     // We'll use a centered diff for the pressure gradient.
@@ -173,10 +177,23 @@ Castro::shock(const Box& bx,
     } else {
       shk(i,j,k) = 0.0_rt;
     }
+#endif
+#if (castro::disable_shock_burning == 2)
+    // pressure based shock detection method from Bidali et. al.
+    Real r_i = 0.0_rt;
+    Real num = abs(q_arr(i+1,j,k,QPRES) - 2*q_arr(i,j+1,k,QPRES) + q_arr(i-1,j,k,QPRES));
+    Real denom = abs(q_arr(i+1,j,k,QPRES) + 2*q_arr(i,j,k,QPRES) + q_arr(i-1,j,k,QPRES));
+
+    r_i = (num / denom) * ((div_u * div_u) / (div_u * div_u + curl_u * curl_u + 1.e-30)) + 1.e-16;
+
+    if (r_i > castro::shock_detection_threshold) {
+      shk(i,j,k) = 1.0_rt;
+    } else {
+      shk(i,j,k) = 0.0_rt;
+    }
   });
-
+#endif
 }
-
 
 void
 Castro::divu(const Box& bx,
