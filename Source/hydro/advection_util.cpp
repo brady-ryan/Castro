@@ -178,7 +178,7 @@ if (castro::disable_shock_burning == 1) {
       shk(i,j,k) = 0.0_rt;
     }
 #endif
-} elif (castro::disable_shock_burning == 2) {
+} else if (castro::disable_shock_burning == 2) {
     // pressure based shock detection method from Bidali et. al.
     Real r_i = 0.0_rt;
     Real num = abs(q_arr(i+1,j,k,QPRES) - 2*q_arr(i,j+1,k,QPRES) + q_arr(i-1,j,k,QPRES));
@@ -193,7 +193,6 @@ if (castro::disable_shock_burning == 1) {
     }
   }
   });
-#endif
 }
 
 void
