@@ -111,8 +111,8 @@ Castro::shock(const Box& bx,
      div_u += 0.5_rt * (rp * q_arr(i+1,j,k,QU) - rm * q_arr(i-1,j,k,QU)) / (rc * dx[0]) +
               0.5_rt * (q_arr(i,j+1,k,QV) - q_arr(i,j-1,k,QV)) * dyinv;
       // calculate curl{U} in 2D cylindrical coordinates using central difference
-     curl_u += 0.5_rt * (q_arr(i+1,j,k,QV) - q_arr(i-1,j,k,QV)) * dxinv;
-     curl_u -= 0.5_rt * (q_arr(i,j+1,k,QU) - q_arr(i,j-1,k,QU)) * dyinv;
+     curl_u += 0.5_rt * (q_arr(i,j+1,k,QU) - q_arr(i,j-1,k,QU)) * dyinv;
+     curl_u -= 0.5_rt * (q_arr(i+1,j,k,QV) - q_arr(i-1,j,k,QV)) * dxinv;
 #endif
 #endif
 
@@ -182,7 +182,7 @@ if (castro::disable_shock_burning == 1) {
       shk(i,j,k) = 0.0_rt;
     }
 } else if (castro::disable_shock_burning == 2) {
-    // pressure based shock detection method from Bidali et. al.
+    // pressure based shock detection method from Ducros et. al. 1999
     Real r_i = 0.0_rt;
     Real num = abs(q_arr(i+1,j,k,QPRES) - 2*q_arr(i,j,k,QPRES) + q_arr(i-1,j,k,QPRES));
     Real denom = abs(q_arr(i+1,j,k,QPRES) + 2*q_arr(i,j,k,QPRES) + q_arr(i-1,j,k,QPRES));
